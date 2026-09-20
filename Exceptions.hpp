@@ -6,13 +6,7 @@
 
 class IndexOutOfRange: public std::out_of_range {
 public:
-    IndexOutOfRange(int index, int size) : std::out_of_range("Index " + std::to_string(index) + 
-    " out of range (size: " + std::to_string(size) + ")") {}
-};
-
-class SizeTIndexOutOfRange: public std::out_of_range {
-public:
-    SizeTIndexOutOfRange(size_t index, size_t size) : std::out_of_range("Index " + std::to_string(index) + 
+    IndexOutOfRange(size_t index, size_t size) : std::out_of_range("Index " + std::to_string(index) + 
     " out of range (size: " + std::to_string(size) + ")") {}
 };
 
