@@ -3,12 +3,15 @@
 
 #include "Storage.hpp"
 #include <cstddef>
+#include <type_traits>
 
 template <typename T>
 class SmrtPtr {
 private:
-    inline static Storage<T> storage;
-    Record<T>* record;
+    template <typename>
+    friend class SmrtPtr;
+
+    Record* record;
 
     void Release() {
         if (record == nullptr) {
@@ -16,14 +19,22 @@ private:
         }
         record->count--;
         if (record->count == 0) {
-            storage.DestroyObject(record);
+            Storage::GetStorage().Destroy(record);
         }
+        record = nullptr;
     }
 
 public:
-    SmrtPtr(const T& value) : record(storage.CreateObject(value)) {}
+    SmrtPtr(const T& value) : record(Storage::GetStorage().CreateObject(value)) {}
 
-    SmrtPtr(const SmrtPtr& other) : record(other.record) {
+    SmrtPtr(const SmrtPtr<T>& other) : record(other.record) {
+        if (other.record != nullptr) {
+            record->count++;
+        }
+    }
+
+    template <typename U, typename = std::enable_if_t<std::is_convertible_v<U*, T*>>>
+    SmrtPtr(const SmrtPtr<U>& other) : record(other.record) {
         if (other.record != nullptr) {
             record->count++;
         }
@@ -60,19 +71,22 @@ public:
     }
 
     T& operator*() {
-        return *(record->object);
+        if (record == nullptr)
+            throw NullPointerException("Null pointer");
+        return *static_cast<T*>(record->object);
     }
 
     T* operator->() {
-        return record->object;
+        if (record == nullptr)
+            throw NullPointerException("Null pointer");
+        return static_cast<T*>(record->object);
     }
 };
 
 template <typename T>
 class SmrtPtr<T[]> {
 private:
-    inline static Storage<T> storage;
-    Record<T> *record;
+    Record *record;
 
     void Release() {
         if (record == nullptr) {
@@ -80,12 +94,13 @@ private:
         }
         record->count--;
         if (record->count == 0) {
-            storage.DestroyArray(record);
+            Storage::GetStorage().Destroy(record);
         }
+        record = nullptr;
     }
 
 public:
-    SmrtPtr(size_t size) : record(storage.CreateArray(size)) {}
+    SmrtPtr(size_t size) : record(Storage::GetStorage().CreateArray<T>(size)) {}
 
     SmrtPtr(const SmrtPtr<T[]>& other) : record(other.record) {
         if (other.record != nullptr) {
@@ -124,9 +139,11 @@ public:
     }
 
     T& operator[](size_t index) {
+        if (record == nullptr)
+            throw NullPointerException("Null pointer");
         if (index >= record->size)
             throw IndexOutOfRange(index, record->size);
-        return record->object[index];
+        return static_cast<T*>(record->object)[index];
     }
 
 };
