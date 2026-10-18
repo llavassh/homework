@@ -174,6 +174,12 @@ void TestShrdPtrMovedFromDestruction() {
     CHECK(*a == 42);
 }
 
+ShrdPtr<Person> CreatePersonPtr(UnqPtr<Student>& stud) {
+    ShrdPtr<Student> studentPtr(stud);
+    ShrdPtr<Person> personPtr(studentPtr);
+    return personPtr;
+}
+
 void TestShrdPtrSubTypes() {
     static_assert(std::is_constructible_v<ShrdPtr<Person>, ShrdPtr<Student>>);
     static_assert(!std::is_constructible_v<ShrdPtr<Person>, ShrdPtr<int>>);
@@ -181,6 +187,99 @@ void TestShrdPtrSubTypes() {
     ShrdPtr<Student> studentPtr(stud);
     ShrdPtr<Person> personPtr(studentPtr);
     CHECK(personPtr->age == 20);
+
+    UnqPtr<Student> stud2(Student(19, 2));
+    ShrdPtr<Person> personPtr2 = CreatePersonPtr(stud2);
+    CHECK(personPtr2->age == 19);
+}
+
+void TestShrdPtrArray() {
+    UnqPtr<int[]> owner(3);
+    ShrdPtr<int[]> ptr(owner);
+    ptr[0] = 10;
+    ptr[1] = 20;
+    ptr[2] = 30;
+    CHECK(ptr[0] == 10);
+    CHECK(ptr[1] == 20);
+    CHECK(ptr[2] == 30);
+}
+
+void TestShrdPtrArrayCopyConstructor() {
+    UnqPtr<int[]> owner(3);
+    ShrdPtr<int[]> first(owner);
+    first[0] = 10;
+    first[1] = 20;
+    first[2] = 30;
+    ShrdPtr<int[]> second(first);
+    CHECK(second[0] == 10);
+    CHECK(second[1] == 20);
+    CHECK(second[2] == 30);
+    second[1] = 99;
+    CHECK(first[1] == 99);
+}
+
+void TestShrdPtrArrayCopyAssignment() {
+    UnqPtr<int[]> owner(3);
+    UnqPtr<int[]> anotherOwner(2);
+    ShrdPtr<int[]> first(owner);
+    ShrdPtr<int[]> second(anotherOwner);
+    first[0] = 10;
+    first[1] = 20;
+    first[2] = 30;
+    second[0] = 100;
+    second[1] = 200;
+    first = second;
+    CHECK(first[0] == 100);
+    CHECK(first[1] == 200);
+    bool thrown = false;
+    try {
+        first[2];
+    } catch(IndexOutOfRange&) {
+        thrown = true;
+    }
+    CHECK(thrown);
+}
+
+void TestShrdPtrArrayMoveConstructor() {
+    UnqPtr<int[]> owner(3);
+    ShrdPtr<int[]> first(owner);
+    first[0] = 10;
+    first[1] = 20;
+    first[2] = 30;
+    ShrdPtr<int[]> second(std::move(first));
+    CHECK(second[0] == 10);
+    CHECK(second[1] == 20);
+    CHECK(second[2] == 30);
+    bool thrown = false;
+    try {
+        first[0];
+    }
+    catch (const NullPointerException&) {
+        thrown = true;
+    }
+    CHECK(thrown);
+}
+
+void TestShrdPtrArrayMoveAssignment() {
+    UnqPtr<int[]> owner(3);
+    UnqPtr<int[]> anotherOwner(2);
+    ShrdPtr<int[]> first(owner);
+    ShrdPtr<int[]> second(anotherOwner);
+    first[0] = 10;
+    first[1] = 20;
+    first[2] = 30; 
+    second[0] = 100;
+    second[1] = 200;
+    first = std::move(second);
+    CHECK(first[0] == 100);
+    CHECK(first[1] == 200);
+    bool thrown = false;
+    try {
+        first[2];
+    } catch(IndexOutOfRange&) {
+        thrown = true;
+    }
+    CHECK(thrown);
 }
 
 void TestSequenceWithUnqPtr() {
@@ -225,6 +324,11 @@ int main() {
     TestShrdPtrMoveAssignment();
     TestShrdPtrMovedFromDestruction();
     TestShrdPtrSubTypes();
+    TestShrdPtrArray();
+    TestShrdPtrArrayCopyConstructor();
+    TestShrdPtrArrayCopyAssignment();
+    TestShrdPtrArrayMoveConstructor();
+    TestShrdPtrArrayMoveAssignment();
 
     TestSequenceWithUnqPtr();
 

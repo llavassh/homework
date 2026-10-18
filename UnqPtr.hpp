@@ -9,6 +9,8 @@ public:
     virtual ~UnqPtrBase() = default;
 
     virtual void *Raw() const noexcept = 0;
+    virtual void ResetCount() noexcept = 0;
+    virtual size_t GetSize() const noexcept = 0;
 };
 
 template <typename T>
@@ -46,9 +48,9 @@ public:
         other.count = nullptr;
     }
 
-    UnqPtr &operator=(const UnqPtr &other) = delete;
+    UnqPtr<T> &operator=(const UnqPtr<T> &other) = delete;
 
-    UnqPtr &operator=(UnqPtr&& other) noexcept {
+    UnqPtr<T> &operator=(UnqPtr<T>&& other) noexcept {
         if (this == &other) {
             return *this;
         }
@@ -62,6 +64,14 @@ public:
 
     void* Raw() const noexcept override {
         return ptr;
+    }
+
+    void ResetCount() noexcept override {
+        count = nullptr;
+    }
+
+    size_t GetSize() const noexcept override {
+        return 1;
     }
 
     T& operator*() {
@@ -105,9 +115,9 @@ public:
         other.size = 0;
     }
 
-    UnqPtr &operator=(const UnqPtr &other) = delete;
+    UnqPtr<T[]> &operator=(const UnqPtr<T[]> &other) = delete;
 
-    UnqPtr &operator=(UnqPtr&& other) noexcept {
+    UnqPtr<T[]> &operator=(UnqPtr<T[]>&& other) noexcept {
         if (this == &other) {
             return *this;
         }
@@ -123,6 +133,14 @@ public:
 
     void* Raw() const noexcept override {
         return data;
+    }
+
+    void ResetCount() noexcept override {
+        count = nullptr;
+    }
+
+    size_t GetSize() const noexcept override {
+        return size;
     }
 
     T& operator[](size_t index) {
